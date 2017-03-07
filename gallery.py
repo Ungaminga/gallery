@@ -109,7 +109,7 @@ class Photo(object):
     def name(self):
         return os.path.split(self.filename)[1]
 
-    def __cmp__(self, other):
+    def __lt__(self, other):
         """
         Compare based on filename.
 
@@ -119,7 +119,7 @@ class Photo(object):
         """
         if not isinstance(other, Photo):
             return -1
-        return cmp(self.filename, other.filename)
+        return self.filename < other.filename
         
 ##         if self.is_photo and other.is_video:
 ##             return -1
@@ -359,37 +359,27 @@ class Photo(object):
     ## Generate HTML representation for this image in
     ## the directory dir, under os.curdir
     ########################################################
-    def html(self, album, dir, prev, next, medium_size, quality=DEFAULT_QUALITY, original=True):
-        if self.is_photo:
-            med = self.small(size=medium_size, rotate=True, quality=quality)
-            medium = "%s-medium.jpg"%self.base
-            os.symlink("../" + med, dir + "/" + medium)
+    def html(self, album, dir, prev, next, original=True):
         td = '<TD bgcolor="%s">'%album.bgcolor
         tdwhite = '<TD bgcolor="%s">'%'white'
         body = ""
         body += '<H1><A href="index.html">%s</A></H1>\n'%album.title
         #body += '<H2>%s</H2>\n'%self.name
-        body += '<TABLE width=%s border=0 cellpadding=6 cellspacing=2 bgcolor="%s">\n'%(medium_size, album.bordercolor)
+        body += '<TABLE border=0 cellpadding=6 cellspacing=2 bgcolor="%s">\n'%album.bordercolor
         body += '<TR>%s<A href="%s.html">PREV</A></TD>\n'%(tdwhite,prev.base)
         body += '%s<A href="%s.html">NEXT</A></TD>\n'%(tdwhite,next.base)
         body += '%s<A href="index.html">UP</A></TD>\n'%tdwhite
-        if self.is_photo:
-            body += '%s<FONT size=-1 color="%s">%s, %smm, %ss, f/%s, ISO%s, %s</FONT></TD>\n'%(
-                td, album.textcolor, self.datetime,
-                self.focal_length, self.shutter_speed,
-                self.f_number, self.iso, self.camera)
-        body += '%s<FONT size=0 color="%s">Rating: %s</TD>\n'%(td, album.textcolor, self.rating)
         if original or self.is_video:
             body += '%s<A HREF="%s">%s</A></TD>\n'%(tdwhite, self.name, self.name)
             os.symlink("../" + self.filename, dir + "/" + self.name)
         body += '</TR></TABLE>\n\n'
         if len(self.caption) > 0:
-            body += '<TABLE border=0 cellpadding=6 width=%s bgcolor="%s"><TR><TD bgcolor="%s"><FONT color=%s>%s</FONT></TD></TR></TABLE>'%(
-                medium_size, album.bordercolor, album.bgcolor, album.textcolor, self.caption)
+            body += '<TABLE border=0 cellpadding=6 bgcolor="%s"><TR><TD bgcolor="%s">\
+            <FONT color=%s>%s</FONT></TD></TR></TABLE>'%(album.bordercolor, album.bgcolor, album.textcolor, self.caption)
         body += '<TABLE border=0 cellpadding=4 cellspacing=2 bgcolor="%s"><TR>\n'%album.bgcolor
         #body += '%s<A href="%s.html"><IMG src="%s-thumb.jpg"></A></td>\n'%(td, prev.base, prev.base)
         if self.is_photo:
-            body += '<TD bgcolor="%s"><A href="%s.html"><IMG src="%s"></A></td>\n'%(album.bgcolor,next.base, medium)
+            body += '<TD bgcolor="%s"><A href="%s.html"><IMG src="%s"></A></td>\n'%(album.bgcolor,next.base, self.caption)
         else:
             body += '%s<A HREF="%s.html"><TABLE width=%s bgcolor=%s cellpadding=8><tr><td align=center bgcolor=white>VIDEO CLIP (<A HREF="%s.html">NEXT</A>)</td></tr>  \
                     <tr><td align=center  bgcolor=white><A href="%s" alt="%s">%s</A></td></tr></table></A>\
@@ -437,10 +427,8 @@ class Album(object):
         self.__create_photo_dict()
         self.title = title
         self.columns = 2
-        self.thumb_size = 400
+        self.thumb_size = 150
         self.thumb_quality = DEFAULT_QUALITY
-        self.medium_size = 1024
-        self.medium_quality = DEFAULT_QUALITY
         self.bgcolor = "#FFFFFF"
         self.textcolor = "#000000"
         self.bordercolor = "#000000"
@@ -461,12 +449,6 @@ class Album(object):
     def __get_thumb_quality(self):
         return self.__thumb_quality
     thumb_quality = property(__get_thumb_quality, __set_thumb_quality)
-        
-    def __set_medium_size(self, x):
-        self.__medium_size = int(x)
-    def __get_medium_size(self):
-        return self.__medium_size
-    medium_size = property(__get_medium_size, __set_medium_size)
             
     def __set_medium_quality(self, x):
         self.__medium_quality = int(x)
@@ -601,8 +583,6 @@ class Album(object):
         cols = self.columns
         thumb_size = self.thumb_size
         thumb_quality = self.thumb_quality
-        medium_size = self.medium_size
-        medium_quality = self.medium_quality
         for i in range(len(self)):
             P = self[i]
             print(P)
@@ -639,7 +619,7 @@ class Album(object):
             i_next = i + 1
             if i_next >= len(self):
                 i_next = 0
-            P.html(self, dir, self[i_prev], self[i_next], medium_size, medium_quality)
+            P.html(self, dir, self[i_prev], self[i_next])
 
         body += '\n</TABLE>\n'
         body += '</DIV>\n\n'
@@ -782,6 +762,10 @@ class Album(object):
         title = self.title + " (caption does not contain %s)"%C
         photos = [x for x in self if x.caption.lower().find(c) == -1]
         return Album(photos, title, self)
+    
+    def max_count(self, count):
+        count = int(count)
+        return Album(self.__photos[:count], self.title, self)
 
     
 
@@ -1958,7 +1942,7 @@ def process_file(file, debug=0, noclose=0):
 
 
 if __name__ ==  '__main__':
-    dir = ".html"
+    dir = "html"
     import sys
     argv = sys.argv
     if len(argv) == 1:
@@ -2023,8 +2007,8 @@ if __name__ ==  '__main__':
         a.title = os.path.split(os.path.abspath('.'))[1]
     t = a.title
     if len(argv) > 1:
-        min_rating = int(argv[1])
-        a = a.rated_atleast(min_rating)
+        count = int(argv[1])
+        a = a.max_count(count)
     if len(argv) > 2:
         for v in argv[2:]:
             if v[0] != "+" and v[0] != "-":
