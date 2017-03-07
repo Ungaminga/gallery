@@ -350,10 +350,11 @@ class Photo(object):
     ## the directory dir, under os.curdir
     ########################################################
     def html(self, album, dir, prev, next, original=True):
+        im = Image.open(os.path.join(self.path, self.name))
         body = ""
         body += '<H1><A href="../index.html">%s</A></H1>\n'%album.title
         body += '<A href="%s.html"><img src="thumbs/%s-thumb.jpg"></A>\n'%(prev.base, prev.base)
-        body += '<A href="%s.html"><IMG src="../%s/%s"></A>\n'%(next.base, album.rel_dir, self.caption)
+        body += '<A href="%s.html"><IMG src="../%s/%s" width="%i"></A>\n'%(next.base, album.rel_dir, self.caption, im.size[0])
         body += '<A href="%s.html"><img src="thumbs/%s-thumb.jpg"></A>\n'%(next.base, next.base)
         body += '<BR><A HREF="../%s/%s">%s</A>\n'%(album.rel_dir, self.name, self.name)
         if hasattr(album, 'author'):
@@ -364,6 +365,7 @@ class Photo(object):
         <HTML>
         <HEAD>
            <TITLE>%s</TITLE>
+           <link href="../style.css" rel="stylesheet" />
         </HEAD>
         <BODY 
            <DIV align=center>
@@ -569,6 +571,7 @@ class Album(object):
                 <TITLE>
                 %s
                 </TITLE>
+                <link href="style.css" rel="stylesheet" />
             </HEAD>
             <BODY>
             <center><H1>%s</H1></center>
@@ -1963,3 +1966,18 @@ if __name__ ==  '__main__':
     x = x.replace('src="', 'src="%s/'%dir)
     index = index[:i] + x
     open("index.html","w").write(index)
+
+    css = """body {
+    font-family: verdana, sans-serif;
+    background: #555555;
+    font: inherit;
+    color: white;
+}
+    
+a {
+   color: lightblue;
+}
+"""
+
+    open("style.css", "w").write(css)
+    
