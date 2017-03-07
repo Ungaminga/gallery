@@ -326,7 +326,7 @@ class Photo(object):
     ## Generate resized image of given size in given directory.
     ########################################################
     def small(self, size, rotate=True, quality=DEFAULT_QUALITY):
-        dir = '%s/html'%self.path
+        dir = '%s/gallery/thumbs'%self.path
         if os.path.exists(dir) and not os.path.isdir(dir):
             os.remove(dir)
         if not os.path.exists(dir):
@@ -359,11 +359,10 @@ class Photo(object):
         body += '%s<A href="%s.html">PREV</A></TD>\n'%(tdwhite,prev.base)
         body += '%s<A HREF="%s">%s</A></TD>\n'%(tdwhite, self.name, self.name)
         body += '%s<A href="%s.html">NEXT</A></TD>\n'%(tdwhite,next.base)
-        os.symlink("../" + self.filename, dir + "/" + self.name)
         body += '</TR></TABLE>\n\n'
         body += '<TABLE border=0 cellpadding=4 cellspacing=2 bgcolor="%s"><TR>\n'%album.bgcolor
         #body += '%s<A href="%s.html"><IMG src="%s-thumb.jpg"></A></td>\n'%(td, prev.base, prev.base)
-        body += '<TD bgcolor="%s"><A href="%s.html"><IMG src="%s"></A></td>\n'%(album.bgcolor,next.base, self.caption)
+        body += '<TD bgcolor="%s"><A href="%s.html"><IMG src="../%s"></A></td>\n'%(album.bgcolor,next.base, self.caption)
         body += "</TR></TABLE>\n"
         if hasattr(album, 'author'):
             body += '<hr>%s'%album.author_link
@@ -405,7 +404,7 @@ class Album(object):
         # photo_dict provides alternative dictionary access to the photos
         self.__create_photo_dict()
         self.title = title
-        self.columns = 5
+        self.columns = 7
         self.thumb_size = 200
         self.thumb_quality = DEFAULT_QUALITY
         self.bgcolor = "#FFFFFF"
@@ -536,13 +535,6 @@ class Album(object):
         if os.path.exists(dir):
             if not delete_old_dir:
                 raise IOError("The directory '%s' already exists.  Please delete it first."%dir)
-            else:
-                if os.path.isdir(dir):
-                    for F in os.listdir(dir):
-                        os.unlink(dir + "/" + F)
-                else:
-                    os.unlink(dir)
-                    os.mkdir(dir)
         else:
             os.mkdir(dir)
 
@@ -572,7 +564,7 @@ class Album(object):
             base = P.base
 
             thumb_name = P.small(size=thumb_size, rotate=True, quality=thumb_quality)
-            fname = '%s-thumb.jpg'%P.base
+            fname = 'thumbs/%s-thumb.jpg'%P.base
             body += """
                 <TD width=%s align=center>
                 <A href="%s.html" alt="%s">
@@ -736,7 +728,7 @@ class Album(object):
         if count == 0:
             return Album(self.__photos, self.title, self)
         else: 
-            return Album(self.__photos[:count], self.title. self)
+            return Album(self.__photos[:count], self.title, self)
     
 
 def extension(file):
@@ -1912,7 +1904,7 @@ def process_file(file, debug=0, noclose=0):
 
 
 if __name__ ==  '__main__':
-    dir = "html"
+    dir = "gallery"
     import sys
     argv = sys.argv
     if len(argv) == 1:
