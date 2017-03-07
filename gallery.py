@@ -19,6 +19,7 @@ Requires Python 2.4 or greater.
 #*****************************************************************************
 
 import pickle, os
+from PIL import Image
 
 PHOTO_EXTENSIONS=["jpg","jpeg", 'png']
 VIDEO_EXTENSIONS=["avi","mpg"]
@@ -143,18 +144,6 @@ class Photo(object):
 
     @lazy_prop
     def exif(self):
-        cached = "%s/.exif/%s.exif"%(self.path, self.base)
-        if os.path.exists(cached):
-            return pickle.load(open(cached))
-        print("Extracting exif information from %s"%self.name)
-        x = process_file(open(self.filename,"rb"))
-        if not os.path.exists("%s/.exif"%self.path):
-            os.mkdir("%s/.exif"%self.path)
-        y = {}
-        for k in list(x.keys()):
-            if len(str(x[k])) < 500:
-                y[k] = x[k]
-        pickle.dump(y, open(cached,"w"))
         return x
 
     @prop
@@ -337,22 +326,23 @@ class Photo(object):
     ## Generate resized image of given size in given directory.
     ########################################################
     def small(self, size, rotate=True, quality=DEFAULT_QUALITY):
-        dir = "%s/.small"%self.path
+        dir = '%s/html'%self.path
         if os.path.exists(dir) and not os.path.isdir(dir):
             os.remove(dir)
         if not os.path.exists(dir):
             os.mkdir(dir)
-        file = "%s/%s-small-%s-%s.jpg"%(dir, self.base, size, quality)
+        file = "%s/%s-thumb.jpg"%(dir, self.base)
         if not os.path.exists(file):
             if rotate:
                 rot = self.needed_rotation
             else:
                 rot = 0
-            cmd = 'convert -rotate %s -quality %s -size %sx%s "%s" \
--resize %sx%s +profile "*" "%s"'%\
-            (rot, quality, size, size, self.filename, size, size, file)
-            print("Resizing %s to %s."%(self.name, size))
-            os.system(cmd)
+        
+        im = Image.open(self.name)
+        if (im.size[0] > im.size[1]):
+            im.resize((size, int(size*im.size[1]/im.size[0])), Image.ANTIALIAS).save(file)
+        else: 
+            im.resize((int(size*im.size[0]/im.size[1]), size), Image.ANTIALIAS).save(file)
         return file
 
     ########################################################
@@ -360,31 +350,20 @@ class Photo(object):
     ## the directory dir, under os.curdir
     ########################################################
     def html(self, album, dir, prev, next, original=True):
-        td = '<TD bgcolor="%s">'%album.bgcolor
         tdwhite = '<TD bgcolor="%s">'%'white'
         body = ""
         body += '<H1><A href="index.html">%s</A></H1>\n'%album.title
-        #body += '<H2>%s</H2>\n'%self.name
         body += '<TABLE border=0 cellpadding=6 cellspacing=2 bgcolor="%s">\n'%album.bordercolor
-        body += '<TR>%s<A href="%s.html">PREV</A></TD>\n'%(tdwhite,prev.base)
-        body += '%s<A href="%s.html">NEXT</A></TD>\n'%(tdwhite,next.base)
+        body += '<TR>'
         body += '%s<A href="index.html">UP</A></TD>\n'%tdwhite
-        if original or self.is_video:
-            body += '%s<A HREF="%s">%s</A></TD>\n'%(tdwhite, self.name, self.name)
-            os.symlink("../" + self.filename, dir + "/" + self.name)
+        body += '%s<A href="%s.html">PREV</A></TD>\n'%(tdwhite,prev.base)
+        body += '%s<A HREF="%s">%s</A></TD>\n'%(tdwhite, self.name, self.name)
+        body += '%s<A href="%s.html">NEXT</A></TD>\n'%(tdwhite,next.base)
+        os.symlink("../" + self.filename, dir + "/" + self.name)
         body += '</TR></TABLE>\n\n'
-        if len(self.caption) > 0:
-            body += '<TABLE border=0 cellpadding=6 bgcolor="%s"><TR><TD bgcolor="%s">\
-            <FONT color=%s>%s</FONT></TD></TR></TABLE>'%(album.bordercolor, album.bgcolor, album.textcolor, self.caption)
         body += '<TABLE border=0 cellpadding=4 cellspacing=2 bgcolor="%s"><TR>\n'%album.bgcolor
         #body += '%s<A href="%s.html"><IMG src="%s-thumb.jpg"></A></td>\n'%(td, prev.base, prev.base)
-        if self.is_photo:
-            body += '<TD bgcolor="%s"><A href="%s.html"><IMG src="%s"></A></td>\n'%(album.bgcolor,next.base, self.caption)
-        else:
-            body += '%s<A HREF="%s.html"><TABLE width=%s bgcolor=%s cellpadding=8><tr><td align=center bgcolor=white>VIDEO CLIP (<A HREF="%s.html">NEXT</A>)</td></tr>  \
-                    <tr><td align=center  bgcolor=white><A href="%s" alt="%s">%s</A></td></tr></table></A>\
-                    \n'%(td, next.base, album.medium_size, album.bordercolor, next.base, self.name, self.caption, self.name)
-        #body += '%s<A href="%s.html"><IMG src="%s-thumb.jpg"></A></td>\n'%(td,next.base, next.base)
+        body += '<TD bgcolor="%s"><A href="%s.html"><IMG src="%s"></A></td>\n'%(album.bgcolor,next.base, self.caption)
         body += "</TR></TABLE>\n"
         if hasattr(album, 'author'):
             body += '<hr>%s'%album.author_link
@@ -426,8 +405,8 @@ class Album(object):
         # photo_dict provides alternative dictionary access to the photos
         self.__create_photo_dict()
         self.title = title
-        self.columns = 2
-        self.thumb_size = 150
+        self.columns = 5
+        self.thumb_size = 200
         self.thumb_quality = DEFAULT_QUALITY
         self.bgcolor = "#FFFFFF"
         self.textcolor = "#000000"
@@ -579,7 +558,7 @@ class Album(object):
 
         body += '<P>%s</P>\n'%self.author_link.replace('Photo', 'Photos')
 
-        body += '<TABLE cellpadding="8" border="0">\n\n'
+        body += '<TABLE cellpadding="5" border="0">\n\n'
         cols = self.columns
         thumb_size = self.thumb_size
         thumb_quality = self.thumb_quality
@@ -592,25 +571,14 @@ class Album(object):
             j = name.rfind(".")
             base = P.base
 
-            if P.is_photo:
-                thumb_name = P.small(size=thumb_size, rotate=True, quality=thumb_quality)
-                fname = '%s-thumb.jpg'%P.base
-                os.symlink("../" + thumb_name, dir + "/" + fname)
-                body += """
-                   <TD width=%s align=center>
-                   <A href="%s.html" alt="%s">
-                   <IMG src="%s">
-                   </A><BR>%s</TD>
-                   """%(thumb_size+50, base, P.caption, fname, P.caption)
-            else:  # It's a video
-                body += """
-                   <TD width=%s>
-                   <A href="%s.html">
-                   <TABLE width=%s bgcolor=%s cellpadding=8><tr><td align=center bgcolor=white>VIDEO CLIP</td></tr>  \
-                    <tr><td align=center  bgcolor=white><A href="%s" alt="%s">%s</A></td></tr></table></A>
-                    </TD>
-                   """%(thumb_size+50, base, thumb_size+50, self.bordercolor, P.name, P.caption, P.name)
-            #endif
+            thumb_name = P.small(size=thumb_size, rotate=True, quality=thumb_quality)
+            fname = '%s-thumb.jpg'%P.base
+            body += """
+                <TD width=%s align=center>
+                <A href="%s.html" alt="%s">
+                <IMG src="%s">
+                </A><BR>%s</TD>
+                """%(thumb_size+10, base, P.caption, fname, P.caption)
             if (i+1)%cols == 0 or i == len(self)-1:
                 body += '\n</TR>\n'
             i_prev = i - 1
@@ -765,8 +733,10 @@ class Album(object):
     
     def max_count(self, count):
         count = int(count)
-        return Album(self.__photos[:count], self.title, self)
-
+        if count == 0:
+            return Album(self.__photos, self.title, self)
+        else: 
+            return Album(self.__photos[:count], self.title. self)
     
 
 def extension(file):
