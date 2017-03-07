@@ -343,26 +343,19 @@ class Photo(object):
             im.resize((size, int(size*im.size[1]/im.size[0])), Image.ANTIALIAS).save(file)
         else: 
             im.resize((int(size*im.size[0]/im.size[1]), size), Image.ANTIALIAS).save(file)
-        return file
+        return file.replace("gallery/", "")
 
     ########################################################
     ## Generate HTML representation for this image in
     ## the directory dir, under os.curdir
     ########################################################
     def html(self, album, dir, prev, next, original=True):
-        tdwhite = '<TD bgcolor="%s">'%'white'
         body = ""
-        body += '<H1><A href="index.html">%s</A></H1>\n'%album.title
-        body += '<TABLE border=0 cellpadding=6 cellspacing=2 bgcolor="%s">\n'%album.bordercolor
-        body += '<TR>'
-        body += '%s<A href="index.html">UP</A></TD>\n'%tdwhite
-        body += '%s<A href="%s.html">PREV</A></TD>\n'%(tdwhite,prev.base)
-        body += '%s<A HREF="%s">%s</A></TD>\n'%(tdwhite, self.name, self.name)
-        body += '%s<A href="%s.html">NEXT</A></TD>\n'%(tdwhite,next.base)
-        body += '</TR></TABLE>\n\n'
-        body += '<TABLE border=0 cellpadding=4 cellspacing=2 bgcolor="%s"><TR>\n'%album.bgcolor
-        body += '<TD bgcolor="%s"><A href="%s.html"><IMG src="../%s/%s"></A></td>\n'%(album.bgcolor, next.base, album.rel_dir, self.caption)
-        body += "</TR></TABLE>\n"
+        body += '<H1><A href="../index.html">%s</A></H1>\n'%album.title
+        body += '<A href="%s.html"><img src="thumbs/%s-thumb.jpg"></A>\n'%(prev.base, prev.base)
+        body += '<A href="%s.html"><IMG src="../%s/%s"></A>\n'%(next.base, album.rel_dir, self.caption)
+        body += '<A href="%s.html"><img src="thumbs/%s-thumb.jpg"></A>\n'%(next.base, next.base)
+        body += '<BR><A HREF="../%s/%s">%s</A>\n'%(album.rel_dir, self.name, self.name)
         if hasattr(album, 'author'):
             body += '<hr>%s'%album.author_link
         
@@ -372,14 +365,12 @@ class Photo(object):
         <HEAD>
            <TITLE>%s</TITLE>
         </HEAD>
-        <BODY bgcolor="%s">
-           <FONT color="%s">
+        <BODY 
            <DIV align=center>
            %s
            </DIV>
-           </FONT>
         </BODY>
-        """%(album.title, album.bgcolor, album.textcolor, body)
+        """%(album.title, body)
         
         open('%s/%s.html'%(dir, self.base), "w").write(s)
 
@@ -540,39 +531,27 @@ class Album(object):
 
         body = ""
         
-        body += """
-        <DIV align="center">
-        <H1>%s</H1>
-        """%self.title
+        body += '<DIV>'
 
         if hasattr(self, 'date'):
             body += '<H2>%s</H2>'%self.date
 
         body += '<P>%s</P>\n'%self.author_link.replace('Photo', 'Photos')
 
-        body += '<TABLE cellpadding="5" border="0">\n\n'
-        cols = self.columns
         thumb_size = self.thumb_size
         thumb_quality = self.thumb_quality
         for i in range(len(self)):
             P = self[i]
             print(P)
-            if i % cols == 0:
-                body += '<TR>\n'
             ext = P.ext
             j = name.rfind(".")
             base = P.base
 
-            thumb_name = P.small(size=thumb_size, rotate=True, quality=thumb_quality)
-            fname = 'thumbs/%s-thumb.jpg'%P.base
+            fname = P.small(thumb_size)
             body += """
-                <TD width=%s align=center>
                 <A href="%s.html" alt="%s">
-                <IMG src="%s">
-                </A><BR>%s</TD>
-                """%(thumb_size+10, base, P.caption, fname, P.caption)
-            if (i+1)%cols == 0 or i == len(self)-1:
-                body += '\n</TR>\n'
+                <IMG src="%s" title="%s"></A>
+                """%(base, P.caption, fname, P.caption)
             i_prev = i - 1
             if i_prev < 0:
                 i_prev = len(self)-1
@@ -581,7 +560,6 @@ class Album(object):
                 i_next = 0
             P.html(self, dir, self[i_prev], self[i_next])
 
-        body += '\n</TABLE>\n'
         body += '</DIV>\n\n'
 
         # Assemble
@@ -592,13 +570,13 @@ class Album(object):
                 %s
                 </TITLE>
             </HEAD>
-            <BODY bgcolor="%s">
-            <FONT color="%s">
+            <BODY>
+            <center><H1>%s</H1></center>
             %s
             </FONT>
             </BODY>
         </HTML>
-        """%(self.title, self.bgcolor, self.textcolor, body)
+        """%(self.title, self.title, body)
 
         open("%s/index.html"%dir,"w").write(s)
 
@@ -1979,7 +1957,7 @@ if __name__ ==  '__main__':
     a.sort()  
     a.html(dir, delete_old_dir=True)
     index = open("%s/index.html"%dir).read()
-    i = index.find("TABLE")
+    i = index.find("<A href=")
     x = index[i:]
     x = x.replace('href="', 'href="%s/'%dir)
     x = x.replace('src="', 'src="%s/'%dir)
