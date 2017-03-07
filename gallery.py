@@ -6,6 +6,7 @@ Requires Python 2.4 or greater.
 
 #*****************************************************************************
 #       Copyright (C) 2005 William Stein <was@math.harvard.edu>
+#       Copyright (C) 2017 Ungaminga <loljkpro@cock.li>
 #  (except for the exif reading code included near the middle of this file!)
 #
 #  Distributed under the terms of the GNU General Public License (GPL)
