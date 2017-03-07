@@ -18,7 +18,7 @@ Requires Python 2.4 or greater.
 #  The full text of the GPL is available at: http://www.gnu.org/licenses/
 #*****************************************************************************
 
-import cPickle, os
+import pickle, os
 
 PHOTO_EXTENSIONS=["jpg","jpeg", 'png']
 VIDEO_EXTENSIONS=["avi","mpg"]
@@ -40,7 +40,7 @@ class lazy_prop(object):
         if obj is None:
             return self
         value = self._calculate(obj)
-        setattr(obj, self._calculate.func_name, value)
+        setattr(obj, self._calculate.__name__, value)
         return value
 
 def prop(f):
@@ -61,7 +61,7 @@ class Photo(object):
     def __set_caption(self, x):
         x = str(x)
         if x.find(":") != -1:
-            raise ValueError, "Captions cannot contain a colon (i.e., ':')."
+            raise ValueError("Captions cannot contain a colon (i.e., ':').")
         self.__caption = x
         
     def __get_caption(self):
@@ -145,16 +145,16 @@ class Photo(object):
     def exif(self):
         cached = "%s/.exif/%s.exif"%(self.path, self.base)
         if os.path.exists(cached):
-            return cPickle.load(open(cached))
-        print "Extracting exif information from %s"%self.name
+            return pickle.load(open(cached))
+        print("Extracting exif information from %s"%self.name)
         x = process_file(open(self.filename,"rb"))
         if not os.path.exists("%s/.exif"%self.path):
             os.mkdir("%s/.exif"%self.path)
         y = {}
-        for k in x.keys():
+        for k in list(x.keys()):
             if len(str(x[k])) < 500:
                 y[k] = x[k]
-        cPickle.dump(y, open(cached,"w"))
+        pickle.dump(y, open(cached,"w"))
         return x
 
     @prop
@@ -351,7 +351,7 @@ class Photo(object):
             cmd = 'convert -rotate %s -quality %s -size %sx%s "%s" \
 -resize %sx%s +profile "*" "%s"'%\
             (rot, quality, size, size, self.filename, size, size, file)
-            print "Resizing %s to %s."%(self.name, size)
+            print("Resizing %s to %s."%(self.name, size))
             os.system(cmd)
         return file
 
@@ -514,7 +514,7 @@ class Album(object):
         else:
             os.mkdir(DIR)
         for P in self:
-            print P.filename
+            print(P.filename)
             os.symlink("../" + P.filename, DIR + "/" + P.name)
         os.system("cd .view; %s .&"%VIEWER)
 
@@ -533,12 +533,12 @@ class Album(object):
             try:
                 return self.__photos[x]
             except IndexError:
-                raise IndexError, "The index must satisfy 0 <= i < %s"%len(self)
+                raise IndexError("The index must satisfy 0 <= i < %s"%len(self))
         else:
             try:
                 return self.__photo_dict[str(x).lower()]
             except KeyError:
-                raise KeyError, "No photo with name '%s'"%x
+                raise KeyError("No photo with name '%s'"%x)
 
 
     def _get_photos(self):
@@ -552,7 +552,7 @@ class Album(object):
         try:
             return self.__photo_dict[name]
         except KeyError:
-            raise KeyError, "No photo named '%s' in the album."%name
+            raise KeyError("No photo named '%s' in the album."%name)
 
     @prop
     def author_link(self):
@@ -570,11 +570,11 @@ class Album(object):
 
 
     def html(self, name="html", delete_old_dir=False):
-        print "Generating gallery %s"%self.title
+        print("Generating gallery %s"%self.title)
         dir = os.curdir + "/" + name
         if os.path.exists(dir):
             if not delete_old_dir:
-                raise IOError, "The directory '%s' already exists.  Please delete it first."%dir
+                raise IOError("The directory '%s' already exists.  Please delete it first."%dir)
             else:
                 if os.path.isdir(dir):
                     for F in os.listdir(dir):
@@ -603,9 +603,9 @@ class Album(object):
         thumb_quality = self.thumb_quality
         medium_size = self.medium_size
         medium_quality = self.medium_quality
-        for i in xrange(len(self)):
+        for i in range(len(self)):
             P = self[i]
-            print P
+            print(P)
             if i % cols == 0:
                 body += '<TR>\n'
             ext = P.ext
@@ -731,7 +731,7 @@ class Album(object):
                 try:
                     F = self[prop]
                 except KeyError:
-                    print "WARNING: No photo '%s' in the album."%prop
+                    print("WARNING: No photo '%s' in the album."%prop)
                 else:
                     F.rating = rating
                     F.caption = caption
@@ -745,19 +745,19 @@ class Album(object):
                 #print "Setting album property '%s' to '%s'."%(prop, value)
                 prop = prop.lower()
                 if not prop in PROPS:
-                    print "WARNING: property %s will not be used."%prop
+                    print("WARNING: property %s will not be used."%prop)
                 setattr(self,prop,value)
         #end
 
     def __add__(self, other):
         if not isinstance(other, Album):
-            raise TypeError, "other must be an Album."
+            raise TypeError("other must be an Album.")
         photos = self.photos + other.photos
         title = self.title + " + " + other.title
         return Album(photos, title, self)
 
     def save(self, filename):
-        cPickle.dump(self, open(filename,"w"))
+        pickle.dump(self, open(filename,"w"))
 
     def rated_atleast(self, r):
         r = int(r)
@@ -792,7 +792,7 @@ def extension(file):
     return file[i+1:]
 
 def load_album(filename):
-    return cPickle.load(open(filename))
+    return pickle.load(open(filename))
 
 def save_album(album, filename):
     album.save(filename)
@@ -862,7 +862,7 @@ def album(dir, conf=None):
         Album -- object of type album
     """
     if not os.path.isdir(dir):
-        raise IOError, "No such directory: '%s'"%dir
+        raise IOError("No such directory: '%s'"%dir)
     i = dir.rfind("/")
     if i != -1:
         title = dir[i+1:]
@@ -1534,7 +1534,7 @@ MAKERNOTE_CANON_TAG_0x004={
 def s2n_motorola(str):
     x=0
     for c in str:
-        x=(long(x) << 8) | ord(c)
+        x=(int(x) << 8) | ord(c)
     return x
 
 # extract multibyte integer in Intel format (big endian)
@@ -1542,7 +1542,7 @@ def s2n_intel(str):
     x=0
     y=0
     for c in str:
-        x= x | (long(ord(c)) << y)
+        x= x | (int(ord(c)) << y)
         y=y+8
     return x
 
@@ -1610,7 +1610,7 @@ class EXIF_header:
             val=s2n_motorola(slice)
         # Sign extension ?
         if signed:
-            msb = long(1) << (8*length-1)
+            msb = int(1) << (8*length-1)
             if val & msb:
                 val=val-(msb << 1)
         return val
@@ -1653,8 +1653,7 @@ class EXIF_header:
             field_type=self.s2n(entry+2, 2)
             if not 0 < field_type < len(FIELD_TYPES):
                 # unknown field type
-                raise ValueError, \
-                      'unknown type %d in tag 0x%04X' % (field_type, tag)
+                raise ValueError('unknown type %d in tag 0x%04X' % (field_type, tag))
             typelen=FIELD_TYPES[field_type][0]
             count=self.s2n(entry+4, 4)
             offset=entry+8
@@ -1710,8 +1709,8 @@ class EXIF_header:
                                                      values, field_offset,
                                                      count*typelen)
             if self.debug:
-                print '    %s: %s' % (tag_name,
-                                      repr(self.tags[ifd_name+' '+tag_name]))
+                print('    %s: %s' % (tag_name,
+                                      repr(self.tags[ifd_name+' '+tag_name])))
 
     # extract uncompressed TIFF thumbnail (like pulling teeth)
     # we take advantage of the pre-existing layout in the thumbnail IFD as
@@ -1823,7 +1822,7 @@ class EXIF_header:
             for i in (('MakerNote Tag 0x0001', MAKERNOTE_CANON_TAG_0x001),
                       ('MakerNote Tag 0x0004', MAKERNOTE_CANON_TAG_0x004)):
                 if self.debug:
-                  print ' SubMakerNote BitSet for ' +i[0]
+                  print(' SubMakerNote BitSet for ' +i[0])
                 self.canon_decode_tag(self.tags[i[0]].values, i[1])
             return
 
@@ -1840,7 +1839,7 @@ class EXIF_header:
             else:
                 val=value[i]
             if self.debug:
-                print '      '+name+':', val
+                print('      '+name+':', val)
             self.tags['MakerNote '+name]=val
 
 # process an image file (expects an open file object)
@@ -1876,7 +1875,7 @@ def process_file(file, debug=0, noclose=0):
 
     # deal with the EXIF info we found
     if debug:
-        print {'I': 'Intel', 'M': 'Motorola'}[endian], 'format'
+        print({'I': 'Intel', 'M': 'Motorola'}[endian], 'format')
     hdr=EXIF_header(file, endian, offset, debug)
     ifd_list=hdr.list_IFDs()
     ctr=0
@@ -1889,7 +1888,7 @@ def process_file(file, debug=0, noclose=0):
         else:
             IFD_name='IFD %d' % ctr
         if debug:
-            print ' IFD %d (%s) at offset %d:' % (ctr, IFD_name, i)
+            print(' IFD %d (%s) at offset %d:' % (ctr, IFD_name, i))
         hdr.tags['Exif Offset'] = offset
         hdr.tags[IFD_name+' IFDOffset'] = i
         hdr.dump_IFD(i, IFD_name)
@@ -1897,28 +1896,28 @@ def process_file(file, debug=0, noclose=0):
         exif_off=hdr.tags.get(IFD_name+' ExifOffset')
         if exif_off:
             if debug:
-                print ' EXIF SubIFD at offset %d:' % exif_off.values[0]
+                print(' EXIF SubIFD at offset %d:' % exif_off.values[0])
             hdr.dump_IFD(exif_off.values[0], 'EXIF')
             # Interoperability IFD contained in EXIF IFD
             #intr_off=hdr.tags.get('EXIF SubIFD InteroperabilityOffset')
             intr_off=hdr.tags.get('EXIF InteroperabilityOffset')
             if intr_off:
                 if debug:
-                    print ' EXIF Interoperability SubSubIFD at offset %d:' \
-                          % intr_off.values[0]
+                    print(' EXIF Interoperability SubSubIFD at offset %d:' \
+                          % intr_off.values[0])
                 hdr.dump_IFD(intr_off.values[0], 'EXIF Interoperability',
                              dict=INTR_TAGS)
             # deal with MakerNote contained in EXIF IFD
-            if hdr.tags.has_key('EXIF MakerNote'):
+            if 'EXIF MakerNote' in hdr.tags:
                 if debug:
-                    print ' EXIF MakerNote SubSubIFD at offset %d:' \
-                          % intr_off.values[0]
+                    print(' EXIF MakerNote SubSubIFD at offset %d:' \
+                          % intr_off.values[0])
                 hdr.decode_maker_note()
         # GPS IFD
         gps_off=hdr.tags.get(IFD_name+' GPSInfoOffset')
         if gps_off:
             if debug:
-                print ' GPS SubIFD at offset %d:' % gps_off.values[0]
+                print(' GPS SubIFD at offset %d:' % gps_off.values[0])
             hdr.dump_IFD(gps_off.values[0], 'GPS', dict=GPS_TAGS)
         ctr+=1
 
@@ -1937,7 +1936,7 @@ def process_file(file, debug=0, noclose=0):
         
     # Sometimes in a TIFF file, a JPEG thumbnail is hidden in the MakerNote
     # since it's not allowed in a uncompressed TIFF IFD
-    if not hdr.tags.has_key('JPEGThumbnail'):
+    if 'JPEGThumbnail' not in hdr.tags:
         thumb_off=hdr.tags.get('MakerNote JPEGThumbnail')
         if thumb_off:
             file.seek(offset+thumb_off.values[0])
@@ -1974,36 +1973,36 @@ if __name__ ==  '__main__':
         s += "Usage: %s min_rating [+keyword] [-keyword] ...\n"%(prog)
         s += "\n"
         s += "---------------------------------------------------------------------------\n"
-	s +=  " Create an HTML gallery of photos with rating at least min_rating,\n"
-	s +=  " making use of any .txt files in the current directory for rating,\n"
+        s +=  " Create an HTML gallery of photos with rating at least min_rating,\n"
+        s +=  " making use of any .txt files in the current directory for rating,\n"
         s +=  " captioning, and style information.  The photos are sorted by date/time.\n"
         s +=  "\n"
-	s +=  " The default photo rating is 0, so type '%s 0' to make \n"%prog
-	s +=  " a gallery of all photos (except any you have rated negative).\n"
-	s +=  " If +keyword appears for any keyword, only photos whose caption\n"
-	s +=  " contains keyword will be included.  You can include any number\n"
-	s +=  " of +keywords, to include only photos that contain *all* those words.\n"
-	s +=  " Likewise, -keyword only includes photos that do not contain keyword.\n"
-	s +=  " The keywords are not case sensitive.\n"
-	s +=  "\n"
-	s +=  "EXAMPLES:\n"
-	s +=  " * Make gallery of all photos in current directory not rated negative.\n"
-	s +=  "       %s 0\n"%prog
-	s +=  "\n"
-	s +=  " * Create gallery of photos rated at least 2 that don't contain\n"
-	s +=  "   the word Kelly but do contain William.\n"
-	s +=  "       %s 2 -kelly +william\n"%prog
-	s +=  "\n"
+        s +=  " The default photo rating is 0, so type '%s 0' to make \n"%prog
+        s +=  " a gallery of all photos (except any you have rated negative).\n"
+        s +=  " If +keyword appears for any keyword, only photos whose caption\n"
+        s +=  " contains keyword will be included.  You can include any number\n"
+        s +=  " of +keywords, to include only photos that contain *all* those words.\n"
+        s +=  " Likewise, -keyword only includes photos that do not contain keyword.\n"
+        s +=  " The keywords are not case sensitive.\n"
+        s +=  "\n"
+        s +=  "EXAMPLES:\n"
+        s +=  " * Make gallery of all photos in current directory not rated negative.\n"
+        s +=  "       %s 0\n"%prog
+        s +=  "\n"
+        s +=  " * Create gallery of photos rated at least 2 that don't contain\n"
+        s +=  "   the word Kelly but do contain William.\n"
+        s +=  "       %s 2 -kelly +william\n"%prog
+        s +=  "\n"
         s +=  "RATINGS AND CAPTIONS:\n"
-	s +=  " The %s program makes use of any file with extension .txt in the\n"%prog
+        s +=  " The %s program makes use of any file with extension .txt in the\n"%prog
         s +=  " current directory, parsing all of them in alphabetical order.\n"
         s +=  " The format of a .txt file is a series of lines as follows:\n"
         s +=  "\n"
-	s +=  "     property: value\n"
+        s +=  "     property: value\n"
         s +=  "     image_name: rating caption\n"
         s +=  "     # a comment begins with # and will be ignored.\n"
         s +=  "\n"
- 	s +=  " * image_name must be the file name of an image (or video) including\n "
+        s +=  " * image_name must be the file name of an image (or video) including\n "
         s +=  "   the extension, e.g., img_7430.jpg.  The rating must be an integer,\n"
         s +=  "   and the caption text is any text that does not contain a colon.\n"
         s +=  "   The rating may be omitted, and the caption text may span multiple lines.\n"
