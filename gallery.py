@@ -52,6 +52,8 @@ class Photo(object):
         self.__filename = filename
         self.caption = caption
         self.rating = rating
+        self.size = (0, 0)
+        self.thumb_size = (0, 0)
 
     def __repr__(self):
         s = "%s: %s"%(self.name, self.rating)
@@ -332,17 +334,15 @@ class Photo(object):
         if not os.path.exists(dir):
             os.mkdir(dir)
         file = "%s/%s-thumb.jpg"%(dir, self.base)
-        if not os.path.exists(file):
-            if rotate:
-                rot = self.needed_rotation
-            else:
-                rot = 0
         
         im = Image.open(os.path.join(self.path, self.name))
+        self.size = im.size
         if (im.size[0] > im.size[1]):
             im.resize((size, int(size*im.size[1]/im.size[0])), Image.ANTIALIAS).save(file)
+            self.thumb_size = (size, int(size*im.size[1]/im.size[0]))
         else: 
             im.resize((int(size*im.size[0]/im.size[1]), size), Image.ANTIALIAS).save(file)
+            self.thumb_size = int(size*im.size[0]/im.size[1]), size
         return file.replace("gallery/", "")
 
     ########################################################
@@ -551,9 +551,9 @@ class Album(object):
 
             fname = P.small(thumb_size)
             body += """
-                <A href="%s.html" alt="%s">
-                <IMG src="%s" title="%s"></A>
-                """%(base, P.caption, fname, P.caption)
+                <a href="%s.html" alt="%s">
+                <img src="%s" width=%i height=%i" title="%s"></a>
+                """%(base, P.caption, fname, P.thumb_size[0], P.thumb_size[1], P.caption)
             i_prev = i - 1
             if i_prev < 0:
                 i_prev = len(self)-1
@@ -1960,7 +1960,7 @@ if __name__ ==  '__main__':
     a.sort()  
     a.html(dir, delete_old_dir=True)
     index = open("%s/index.html"%dir).read()
-    i = index.find("<A href=")
+    i = index.find("<a href=")
     x = index[i:]
     x = x.replace('href="', 'href="%s/'%dir)
     x = x.replace('src="', 'src="%s/'%dir)
