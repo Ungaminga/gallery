@@ -326,7 +326,7 @@ class Photo(object):
     ## Generate resized image of given size in given directory.
     ########################################################
     def small(self, size, rotate=True, quality=DEFAULT_QUALITY):
-        dir = '%s/gallery/thumbs'%self.path
+        dir = 'gallery/thumbs'
         if os.path.exists(dir) and not os.path.isdir(dir):
             os.remove(dir)
         if not os.path.exists(dir):
@@ -338,7 +338,7 @@ class Photo(object):
             else:
                 rot = 0
         
-        im = Image.open(self.name)
+        im = Image.open(os.path.join(self.path, self.name))
         if (im.size[0] > im.size[1]):
             im.resize((size, int(size*im.size[1]/im.size[0])), Image.ANTIALIAS).save(file)
         else: 
@@ -361,8 +361,7 @@ class Photo(object):
         body += '%s<A href="%s.html">NEXT</A></TD>\n'%(tdwhite,next.base)
         body += '</TR></TABLE>\n\n'
         body += '<TABLE border=0 cellpadding=4 cellspacing=2 bgcolor="%s"><TR>\n'%album.bgcolor
-        #body += '%s<A href="%s.html"><IMG src="%s-thumb.jpg"></A></td>\n'%(td, prev.base, prev.base)
-        body += '<TD bgcolor="%s"><A href="%s.html"><IMG src="../%s"></A></td>\n'%(album.bgcolor,next.base, self.caption)
+        body += '<TD bgcolor="%s"><A href="%s.html"><IMG src="../%s/%s"></A></td>\n'%(album.bgcolor, next.base, album.rel_dir, self.caption)
         body += "</TR></TABLE>\n"
         if hasattr(album, 'author'):
             body += '<hr>%s'%album.author_link
@@ -394,7 +393,7 @@ class Photo(object):
 
 
 class Album(object):
-    def __init__(self, photos=[], title="", derived_from=None):
+    def __init__(self, photos=[], title="", rel_dir="", derived_from=None):
         """
         photos -- list of objects of type Photo
         title -- title of this album
@@ -410,6 +409,7 @@ class Album(object):
         self.bgcolor = "#FFFFFF"
         self.textcolor = "#000000"
         self.bordercolor = "#000000"
+        self.rel_dir = rel_dir
         if derived_from != None:
             for P in PROPS:
                 if hasattr(derived_from, P) and P != 'title':
@@ -694,7 +694,7 @@ class Album(object):
             raise TypeError("other must be an Album.")
         photos = self.photos + other.photos
         title = self.title + " + " + other.title
-        return Album(photos, title, self)
+        return Album(photos, title, other.rel_path, self)
 
     def save(self, filename):
         pickle.dump(self, open(filename,"w"))
@@ -703,32 +703,30 @@ class Album(object):
         r = int(r)
         title = self.title + " (rated at least %s)"%r
         photos = [x for x in self if x.rating >= r]
-        return Album(photos, title, self)
+        return Album(photos, title, self.rel_dir, self)
 
     def rated_atmost(self, r):
         r = int(r)
         title = self.title + " (rated at most %s)"%r
         photos = [x for x in self if x.rating <= r]
-        return Album(photos, title, self)
+        return Album(photos, title, self.rel_dir, self)
 
     def caption_contains(self, C):
         c = str(C).lower()
         title = self.title + " (caption contains %s)"%C
         photos = [x for x in self if x.caption.lower().find(c) != -1]
-        return Album(photos, title, self)
+        return Album(photos, title, self.rel_dir, self)
 
     def caption_doesnt_contain(self, C):
         c = str(C).lower()
         title = self.title + " (caption does not contain %s)"%C
         photos = [x for x in self if x.caption.lower().find(c) == -1]
-        return Album(photos, title, self)
+        return Album(photos, title, self.rel_dir, self)
     
     def max_count(self, count):
         count = int(count)
-        if count == 0:
-            return Album(self.__photos, self.title, self)
-        else: 
-            return Album(self.__photos[:count], self.title, self)
+        print (self.rel_dir)
+        return Album(self.__photos[:count], self.title, self.rel_dir, self)
     
 
 def extension(file):
@@ -807,6 +805,8 @@ def album(dir, conf=None):
     OUTPUT:
         Album -- object of type album
     """
+    rel_dir = dir
+    dir = os.path.join(os.getcwd(),album_path)
     if not os.path.isdir(dir):
         raise IOError("No such directory: '%s'"%dir)
     i = dir.rfind("/")
@@ -820,7 +820,7 @@ def album(dir, conf=None):
         if ext in EXTENSIONS:
             P = Photo(dir + "/" + F, caption=F)
             photos.append(P)
-    A = Album(photos, title)
+    A = Album(photos, title, rel_dir)
     A.sort()
     
     # parse all the .txt files in the current directory.
@@ -1964,21 +1964,17 @@ if __name__ ==  '__main__':
 
         sys.exit(0)
         
-    a = album('.')
+    if len(argv) > 1:
+        album_path = str(argv[1])
+    if len(argv) > 2:
+        count = int(argv[2])
+    a = album(album_path)
     if a.title == ".":
         a.title = os.path.split(os.path.abspath('.'))[1]
     t = a.title
-    if len(argv) > 1:
-        count = int(argv[1])
+    if (count): 
         a = a.max_count(count)
-    if len(argv) > 2:
-        for v in argv[2:]:
-            if v[0] != "+" and v[0] != "-":
-                v = "+" + v
-            if v[0] == "+":
-                a = a.caption_contains(v[1:])
-            elif v[0] == "-":
-                a = a.caption_doesnt_contain(v[1:])
+    
     a.title = t
     a.sort()  
     a.html(dir, delete_old_dir=True)
