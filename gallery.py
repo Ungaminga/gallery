@@ -19,7 +19,7 @@ Requires Python 2.4 or greater.
 #  The full text of the GPL is available at: http://www.gnu.org/licenses/
 #*****************************************************************************
 
-import pickle, os
+import pickle, os, random
 from PIL import Image
 
 PHOTO_EXTENSIONS=["jpg","jpeg", 'png']
@@ -350,25 +350,26 @@ class Photo(object):
     ## Generate HTML representation for this image in
     ## the directory dir, under os.curdir
     ########################################################
-    def html(self, album, dir, prev, next, original=True):
-        im = Image.open(os.path.join(self.path, self.name))
+    def html(self, album, dir, prev, next, randoms, original=True):
         body = ""
         body += '<H1><A href="../index.html">%s</A></H1>\n'%album.title
         body += '<A href="%s.html"><img src="thumbs/%s-thumb.jpg"></A>\n'%(prev.base, prev.base)
-        body += '<A href="%s.html"><IMG src="../%s/%s" width="%i"></A>\n'%(next.base, album.rel_dir, self.caption, im.size[0])
+        body += '<A href="%s.html"><IMG src="../%s/%s" width="%i"></A>\n'%(next.base, album.rel_dir, self.caption, self.size[0])
         body += '<A href="%s.html"><img src="thumbs/%s-thumb.jpg"></A>\n'%(next.base, next.base)
-        body += '<BR><A HREF="../%s/%s">%s</A>\n'%(album.rel_dir, self.name, self.name)
-        if hasattr(album, 'author'):
-            body += '<hr>%s'%album.author_link
+        body += '<br> <span> random pics: </span>'
+        body += '<A HREF="../%s/%s">%s</A>\n<HR>'%(album.rel_dir, self.name, self.name)
         
-
+        body += '<div style="overflow:hidden; max-height: 200px">'
+        for image in randoms:
+            body += '<A href="%s.html"><img src="thumbs/%s-thumb.jpg"></A>\n'%(image.base, image.base)
+        body += '</div>'
         s = """
         <HTML>
         <HEAD>
            <TITLE>%s</TITLE>
            <link href="../style.css" rel="stylesheet" />
         </HEAD>
-        <BODY 
+        <BODY>
            <DIV align=center>
            %s
            </DIV>
@@ -397,7 +398,6 @@ class Album(object):
         # photo_dict provides alternative dictionary access to the photos
         self.__create_photo_dict()
         self.title = title
-        self.columns = 7
         self.thumb_size = 200
         self.thumb_quality = DEFAULT_QUALITY
         self.bgcolor = "#FFFFFF"
@@ -541,16 +541,13 @@ class Album(object):
 
         body += '<P>%s</P>\n'%self.author_link.replace('Photo', 'Photos')
 
-        thumb_size = self.thumb_size
-        thumb_quality = self.thumb_quality
         for i in range(len(self)):
             P = self[i]
-            print(P)
-            ext = P.ext
             j = name.rfind(".")
             base = P.base
 
-            fname = P.small(thumb_size)
+            fname = P.small(self.thumb_size)
+            print("%s, size %ix%i"%(P.base, P.size[0], P.size[1]))
             body += """
                 <a href="%s.html" alt="%s">
                 <img src="%s" width=%i height=%i" title="%s"></a>
@@ -561,7 +558,19 @@ class Album(object):
             i_next = i + 1
             if i_next >= len(self):
                 i_next = 0
-            P.html(self, dir, self[i_prev], self[i_next])
+            
+            random_images = []
+            count = 0
+            s__photos = list(self.__photos)
+            random.shuffle(s__photos)
+            for itr in s__photos:
+                if itr == self[i_prev] or itr== self[i_next] or itr == self[i]:
+                    continue
+                random_images.append(itr)
+                count = count + 1
+                if count == 9:
+                    break
+            P.html(self, dir, self[i_prev], self[i_next], random_images)
 
         body += '</DIV>\n\n'
 
@@ -575,7 +584,7 @@ class Album(object):
                 <link href="style.css" rel="stylesheet" />
             </HEAD>
             <BODY>
-            <center><H1>%s</H1></center>
+            <H1> %s</H1>
             %s
             </FONT>
             </BODY>
@@ -1875,6 +1884,33 @@ def process_file(file, debug=0, noclose=0):
     return hdr.tags
 
 
+def write_css():
+    css = """body {
+    font-family: verdana, sans-serif;
+    background: #555555;
+    font: inherit;
+    color: white;
+}
+
+a {
+   color: lightblue;
+}
+
+h1 > a {
+   position: absolute;
+   left: 10px;
+}
+
+span {
+      position: absolute;
+      left: 10px;
+}
+img {
+     max-width: 30%;
+}
+"""
+
+    open("style.css", "w").write(css)
 
 
 ##########################################################################
@@ -1950,6 +1986,8 @@ if __name__ ==  '__main__':
         album_path = str(argv[1])
     if len(argv) > 2:
         count = int(argv[2])
+
+    write_css()
     a = album(album_path)
     if a.title == ".":
         a.title = os.path.split(os.path.abspath('.'))[1]
@@ -1967,18 +2005,4 @@ if __name__ ==  '__main__':
     x = x.replace('src="', 'src="%s/'%dir)
     index = index[:i] + x
     open("index.html","w").write(index)
-
-    css = """body {
-    font-family: verdana, sans-serif;
-    background: #555555;
-    font: inherit;
-    color: white;
-}
-    
-a {
-   color: lightblue;
-}
-"""
-
-    open("style.css", "w").write(css)
     
