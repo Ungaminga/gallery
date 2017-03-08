@@ -354,7 +354,7 @@ class Photo(object):
         body = ""
         body += '<H1><A href="../index.html">%s</A></H1>\n'%album.title
         body += '<A href="%s.html"><img src="thumbs/%s-thumb.jpg"></A>\n'%(prev.base, prev.base)
-        body += '<A href="%s.html"><IMG src="../%s/%s" width="%i"></A>\n'%(next.base, album.rel_dir, self.caption, self.size[0])
+        body += '<A href="%s.html"><IMG src="../%s/%s" width="%i", height="%i"></A>\n'%(next.base, album.rel_dir, self.caption, self.size[0], self.size[1])
         body += '<A href="%s.html"><img src="thumbs/%s-thumb.jpg"></A>\n'%(next.base, next.base)
         body += '<br> <span> random pics: </span>'
         body += '<A HREF="../%s/%s">%s</A>\n<HR>'%(album.rel_dir, self.name, self.name)
