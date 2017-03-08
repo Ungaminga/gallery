@@ -19,10 +19,11 @@ Requires Python 3 or greater.
 #  The full text of the GPL is available at: http://www.gnu.org/licenses/
 #*****************************************************************************
 
-import pickle, os, random, argparse
+import pickle, os, random
 from PIL import Image
 
 PHOTO_EXTENSIONS=["jpg","jpeg", 'png']
+PROPS = ['title']
 
 
 class lazy_prop(object):
