@@ -352,13 +352,15 @@ class Photo(object):
     ########################################################
     def html(self, album, dir, prev, next, randoms, original=True):
         body = ""
+        if self.size[0] < 600:
+            body += '<link rel="preload" as="image" href="../%s/%s">\n' %(album.rel_dir, self.caption)
         body += '<H1><A href="../index.html">%s</A></H1>\n'%album.title
         body += '<A href="%s.html"><img src="thumbs/%s-thumb.jpg"></A>\n'%(prev.base, prev.base)
         body += '<A href="%s.html"><IMG src="../%s/%s" width="%i"></A>\n'%(next.base, album.rel_dir, self.caption, self.size[0] )
         body += '<A href="%s.html"><img src="thumbs/%s-thumb.jpg"></A>\n'%(next.base, next.base)
-        body += '<br> <span> random pics: </span>'
-        body += '<a href="../%s/%s">%s</A> (%ix%i)\n'%(album.rel_dir, self.name, self.name, self.size[0], self.size[1])
-        body += '</div><!--id="page" -->\n<hr>'
+        body += '<br><a href="../%s/%s">%s</A> (%ix%i)\n'%(album.rel_dir, self.name, self.name, self.size[0], self.size[1])
+        body += '</div><!--id="page" -->\n<hr> '
+        body += '<span> random pics: </span>'
         body += '<div style="overflow:hidden; max-height: 200px">'
         for image in randoms:
             body += '<A href="%s.html"><img src="thumbs/%s-thumb.jpg"></A>\n'%(image.base, image.base)
@@ -1903,13 +1905,14 @@ h1 > a {
 span {
       position: absolute;
       left: 10px;
+      margin-top: -30px;
 }
 img {
      max-width: 30%;
 }
 
 #page{
-      max-height: 800px;
+      min-height: calc(100vh - 250px);
       text-align: center;
 }
 """
