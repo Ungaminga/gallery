@@ -88,28 +88,6 @@ class Photo(object):
         if not isinstance(other, Photo):
             return -1
         return self.filename < other.filename
-        
-##         if self.is_photo and other.is_video:
-##             return -1
-##         elif self.is_video and other.is_photo:
-##             return 1
-##         if self.filename == other.filename:
-##             return 0
-##         if self.datetime < other.datetime:
-##             return -1
-##         if self.datetime > other.datetime:
-##             return 1
-##         if self.filename < other.filename:
-##             return -1
-##         elif self.filename > other.filename:
-##             return 1
-##         assert False
-
-    def aperature(self):
-        try:
-            return "1/%s"%self.f_number
-        except:
-            return "?"
 
     ########################################################
     ## Generate resized image of given size in given directory.
@@ -165,14 +143,6 @@ class Photo(object):
         
         open('%s/%s.html'%(dir, self.base), "w").write(s)
 
-        
-
-    ########################################################
-    ## View the photo
-    ########################################################    
-    def show(self):
-        os.system("%s %s&"%(VIEWER, self.filename))
-
 
 class Album(object):
     def __init__(self, photos=[], title="", rel_dir="", derived_from=None):
@@ -212,26 +182,6 @@ class Album(object):
         self.__photos.sort()
         self.__create_photo_dict()
 
-    def show(self):
-        """
-        Show all the photos in the album (using symlinks and the viewer).
-        """
-        DIR = ".view"
-        if os.path.exists(DIR):
-            if os.path.isdir(DIR):
-                for f in os.listdir(DIR):
-                    os.unlink(DIR + "/"+f)
-            else:
-                os.unlink(DIR)
-                os.mkdir(DIR)                
-        else:
-            os.mkdir(DIR)
-        for P in self:
-            print(P.filename)
-            os.symlink("../" + P.filename, DIR + "/" + P.name)
-        os.system("cd .view; %s .&"%VIEWER)
-
-
     def __repr__(self):
         s="Album '%s' with %s photos:\n"%(self.title, len(self))
         for F in self:
@@ -268,7 +218,7 @@ class Album(object):
             raise KeyError("No photo named '%s' in the album."%name)
 
     def html(self, name="html", delete_old_dir=False):
-        print("Generating gallery %s"%self.title)
+        print("Generating gallery %s, %i total images: "%(self.title, len(self)))
         dir = os.curdir + "/" + name
         if os.path.exists(dir):
             if not delete_old_dir:
@@ -285,7 +235,17 @@ class Album(object):
             base = P.base
 
             fname = P.small(self.thumb_size)
-            print("%s, size %ix%i"%(P.base, P.size[0], P.size[1]))
+            
+            if no_output == False:
+                print("[%i from %i]: %s, size %ix%i"%(i, len(self), P.base, P.size[0], P.size[1]))
+            else:
+                progress = "%i from %i ["%((i+1), len(self))
+                progress += "%-20s"%("="*((i+1)*20//len(self))) + "] %i%% done\r"%((i+1)*100//len(self))
+                if i+1 == len(self):
+                    progress += "\n"
+                sys.stdout.write(progress)
+                sys.stdout.flush()
+            
             body += """
                 <a href="%s.html" alt="%s">
                 <img src="%s" width=%i height=%i" title="%s"></a>
@@ -344,7 +304,6 @@ class Album(object):
     
     def max_count(self, count):
         count = int(count)
-        print (self.rel_dir)
         return Album(self.__photos[:count], self.title, self.rel_dir, self)
     
 
@@ -360,7 +319,7 @@ def load_album(filename):
 def save_album(album, filename):
     album.save(filename)
 
-def album(dir, conf=None):
+def album(dir, no_output):
     """
     Create an album from the files in a given directory.
 
@@ -421,6 +380,7 @@ def album(dir, conf=None):
             P = Photo(dir + "/" + F, caption=F)
             photos.append(P)
     A = Album(photos, title, rel_dir)
+    A.no_output= no_output
     A.sort()
 
     return A
@@ -476,33 +436,49 @@ if __name__ ==  '__main__':
     if len(argv) == 1:
         prog = os.path.split(argv[0])[1]
         #argv.append("0")
-        s =  "****************************************************************************\n"
-        s += "* HTML Gallery Program Version 2.0                                         *\n"
-        s += "* Copyright (C) 2005 William Stein <was@math.harvard.edu>                  *\n"
-        s += "* Copyright (C) 2017 Ungaminga <loljkpro@cock.li>                          *\n"
-        s += "* Distributed under the terms of the GNU General Public License (GPL)      *\n"
-        s += "****************************************************************************\n"
+        s =  "  ****************************************************************************\n"
+        s += "  * HTML Gallery Program Version 2.0                                         *\n"
+        s += "  * Copyright (C) 2005 William Stein <was@math.harvard.edu>                  *\n"
+        s += "  * Copyright (C) 2017 Ungaminga <loljkpro@cock.li>                          *\n"
+        s += "  * Distributed under the terms of the GNU General Public License (GPL)      *\n"
+        s += "  ****************************************************************************\n"
         s += "\n"
-        s += "Usage: %s source_directory [files_count=0] ...\n"%(prog)
-        s += "If files_count == 0 - process whole directory. \n\n" 
-        s += "The HTML gallery and thumbnails \n"
-        s += "are stored in subdirectories gallery and gallery/thumb.\n"  
-        s += "\n"*7
+        s += "  Usage: %s source_directory [files_count=0] ...\n"%(prog)
+        s += "  If files_count == 0 - process whole directory. \n\n"
+        s += "  Flags: \n"
+        s += "   [--no-output]: Removes per-lane output thumbnail and html generating output\n"
+        s += "   and enables progressbar.\n\n"
+        s += "  The HTML gallery and thumbnails are stored in subdirectories\n"
+        s += "  gallery and gallery/thumb.\n"
+        s += "\n"*3
         open(".tmp_album","w").write(s)
         os.system("less .tmp_album")
         os.unlink(".tmp_album")
 
         sys.exit(0)
-        
-    if len(argv) > 1:
-        album_path = str(argv[1])
 
+    album_path = ""
     count = 0
-    if len(argv) > 2:
-        count = int(argv[2])
+    no_output = False
+    for i in range(1, 4):
+        if len(argv) > i:
+            if argv[i] == "--no-output":
+                no_output = True
+                #print("no output setted")
+                continue
+            
+            if album_path == "":
+                album_path = str(argv[i])
+                #print ("album_path = %s, i = %i" %(album_path, i))
+                continue
 
+            if count == 0:
+                count = int(argv[i])
+                #print ("count = %i, i = %i" %(count, i))
+                
+            
     write_css()
-    a = album(album_path)
+    a = album(album_path, no_output)
     if a.title == ".":
         a.title = os.path.split(os.path.abspath('.'))[1]
     t = a.title
@@ -519,4 +495,3 @@ if __name__ ==  '__main__':
     x = x.replace('src="', 'src="%s/'%dir)
     index = index[:i] + x
     open("index.html","w").write(index)
-    
