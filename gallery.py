@@ -123,7 +123,7 @@ class Photo(object):
         body += '<A href="%s.html" title="Next"><IMG src="../%s/%s" width="%i"></A>\n'%(next.base, album.rel_dir, self.caption, self.size[0] )
         body += '<A href="%s.html" title="Next"><img src="thumbs/%s-thumb.jpg"></A>\n'%(next.base, next.base)
         body += '<br><a href="../%s/%s">%s</A>'%(album.rel_dir, self.name, self.name)
-        body += '<a href="%s" download title="Download">&#8659;</a></li>\n'%(self.name)
+        body += ' <a href="../%s/%s" download title="Download">&#8659;</a></li>\n'%(album.rel_dir, self.name)
         body += '(%ix%i)\n'%(self.size[0], self.size[1])
         body += '</div><!--id="page" -->\n<hr> '
         body += '<span> random pics: </span>\n'
