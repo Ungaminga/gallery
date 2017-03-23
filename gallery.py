@@ -522,7 +522,7 @@ if __name__ ==  '__main__':
     a.sort()  
     a.html(dir, delete_old_dir=True)
     index = open("%s/index.html"%dir).read()
-    i = index.find("<a href=")
+    i = index.find('<H1>')
     x = index[i:]
     x = x.replace('href="', 'href="%s/'%dir)
     x = x.replace('src="', 'src="%s/'%dir)
