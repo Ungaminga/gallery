@@ -119,27 +119,30 @@ class Photo(object):
         if self.size[0] < 600:
             body += '<link rel="prefetch" as="image" href="../%s/%s">\n' %(album.rel_dir, self.caption)
         body += '<H1><A href="../index.html">%s</A></H1>\n'%album.title
-        body += '<A href="%s.html"><img src="thumbs/%s-thumb.jpg"></A>\n'%(prev.base, prev.base)
-        body += '<A href="%s.html"><IMG src="../%s/%s" width="%i"></A>\n'%(next.base, album.rel_dir, self.caption, self.size[0] )
-        body += '<A href="%s.html"><img src="thumbs/%s-thumb.jpg"></A>\n'%(next.base, next.base)
-        body += '<br><a href="../%s/%s">%s</A> (%ix%i)\n'%(album.rel_dir, self.name, self.name, self.size[0], self.size[1])
+        body += '<A href="%s.html" title="Previous"><img src="thumbs/%s-thumb.jpg"></A>\n'%(prev.base, prev.base)
+        body += '<A href="%s.html" title="Next"><IMG src="../%s/%s" width="%i"></A>\n'%(next.base, album.rel_dir, self.caption, self.size[0] )
+        body += '<A href="%s.html" title="Next"><img src="thumbs/%s-thumb.jpg"></A>\n'%(next.base, next.base)
+        body += '<br><a href="../%s/%s">%s</A>'%(album.rel_dir, self.name, self.name)
+        body += '<a href="%s" download title="Download">&#8659;</a></li>\n'%(self.name)
+        body += '(%ix%i)\n'%(self.size[0], self.size[1])
         body += '</div><!--id="page" -->\n<hr> '
-        body += '<span> random pics: </span>'
+        body += '<span> random pics: </span>\n'
         body += '<div style="overflow:hidden; max-height: 200px">'
         for image in randoms:
             body += '<A href="%s.html"><img src="thumbs/%s-thumb.jpg"></A>\n'%(image.base, image.base)
         body += '</div>'
-        s = """
-        <HTML>
+        s = """<HTML>
         <HEAD>
            <TITLE>%s</TITLE>
            <link href="../style.css" rel="stylesheet" />
         </HEAD>
         <BODY>
+            %s
            <div id="page">
            %s
         </BODY>
-        """%(album.title, body)
+        </HTML>
+        """%(self.name, generate_links(), body)
         
         open('%s/%s.html'%(dir, self.base), "w").write(s)
 
@@ -282,12 +285,13 @@ class Album(object):
                 <link href="style.css" rel="stylesheet" />
             </HEAD>
             <BODY>
+            %s
             <H1> %s</H1>
             %s
             </FONT>
             </BODY>
         </HTML>
-        """%(self.title, self.title, body)
+        """%(self.title, generate_links(), self.title, body)
 
         open("%s/index.html"%dir,"w").write(s)
 
@@ -398,6 +402,10 @@ a {
    color: lightblue;
 }
 
+a[download] {
+   text-decoration: none;
+}
+
 h1 > a {
    position: absolute;
    left: 10px;
@@ -416,10 +424,30 @@ img {
       min-height: calc(100vh - 250px);
       text-align: center;
 }
+/* A div for links */
+div.links{
+    right:5px;
+    position:absolute;
+    background-color: khaki;
+    border: green 2px solid;
+    padding: 2px;
+}
+
+div.links > a{
+      color: blue;
+}
 """
 
     open("style.css", "w").write(css)
 
+def generate_links():
+    ret = ""
+    if with_links == True and len(links):
+        ret += '<div class="links">\n'
+        for link in links:
+            ret += '<a href="%s">%s</a><br>\n'%(link[0], link[1])
+        ret += '</div>\n'
+    return ret
 
 ##########################################################################
 
@@ -435,7 +463,6 @@ if __name__ ==  '__main__':
     argv = sys.argv
     if len(argv) == 1:
         prog = os.path.split(argv[0])[1]
-        #argv.append("0")
         s =  "  ****************************************************************************\n"
         s += "  * HTML Gallery Program Version 2.0                                         *\n"
         s += "  * Copyright (C) 2005 William Stein <was@math.harvard.edu>                  *\n"
@@ -448,9 +475,10 @@ if __name__ ==  '__main__':
         s += "  Flags: \n"
         s += "   [--no-output]: Removes per-lane output thumbnail and html generating output\n"
         s += "   and enables progressbar.\n\n"
+        s += "   [--with-links]: Adds links from your links list variable\n"
         s += "  The HTML gallery and thumbnails are stored in subdirectories\n"
         s += "  gallery and gallery/thumb.\n"
-        s += "\n"*3
+        s += "\n"*2
         open(".tmp_album","w").write(s)
         os.system("less .tmp_album")
         os.unlink(".tmp_album")
@@ -460,21 +488,26 @@ if __name__ ==  '__main__':
     album_path = ""
     count = 0
     no_output = False
-    for i in range(1, 4):
+    with_links = False
+    links = [("https://github.com/Ungaminga/TES-L-Card-Images/archive/master.zip", "Download all")]
+ 
+    for i in range(1, 5):
         if len(argv) > i:
             if argv[i] == "--no-output":
                 no_output = True
                 #print("no output setted")
                 continue
-            
+
+            if (argv[i] == "--with-links"):
+                with_links = True
+                continue
+
             if album_path == "":
                 album_path = str(argv[i])
-                #print ("album_path = %s, i = %i" %(album_path, i))
                 continue
 
             if count == 0:
                 count = int(argv[i])
-                #print ("count = %i, i = %i" %(count, i))
                 
             
     write_css()
