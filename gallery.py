@@ -118,19 +118,23 @@ class Photo(object):
         body = ""
         if self.size[0] < 600:
             body += '<link rel="prefetch" as="image" href="../%s/%s">\n' %(album.rel_dir, self.caption)
-        body += '<H1><A href="../index.html">%s</A></H1>\n'%album.title
-        body += '<A href="%s.html" title="Previous"><img src="thumbs/%s-thumb.jpg"></A>\n'%(prev.base, prev.base)
-        body += '<A href="%s.html" title="Next"><IMG src="../%s/%s" width="%i"></A>\n'%(next.base, album.rel_dir, self.caption, self.size[0] )
-        body += '<A href="%s.html" title="Next"><img src="thumbs/%s-thumb.jpg"></A>\n'%(next.base, next.base)
-        body += '<br><a href="../%s/%s">%s</A>'%(album.rel_dir, self.name, self.name)
-        body += ' <a href="../%s/%s" download title="Download">&#8659;</a></li>\n'%(album.rel_dir, self.name)
-        body += '(%ix%i)\n'%(self.size[0], self.size[1])
-        body += '</div><!--id="page" -->\n<hr> '
+        body += '<H1><A href="../index.html">%s</A></H1> \n\n'%album.title
+        body += '<div class="previous"> \n'
+        body += '<A href="%s.html" title="Previous"><img src="thumbs/%s-thumb.jpg">'%(prev.base, prev.base)
+        body += '<div class="arrow arrow1">⇦</div></A>\n</div> \n\n<div class="picture"> \n'
+        body += '<A href="../%s/%s"><IMG src="../%s/%s" width="%i"></A> \n'%(album.rel_dir, self.name, album.rel_dir, self.caption, self.size[0] )
+        body += '</div> \n\n<div class="next"> \n'
+        body += '<A href="%s.html" title="Next"><img src="thumbs/%s-thumb.jpg">'%(next.base, next.base)
+        body += '<div class="arrow arrow2">⇨</div></A>\n</div> \n\n'
+        body += '<br>\n<a href="../%s/%s">%s</A>'%(album.rel_dir, self.name, self.name)
+        body += ' <a href="../%s/%s" download title="Download">&#8659;</a></li>'%(album.rel_dir, self.name)
+        body += '(%ix%i)\n\n'%(self.size[0], self.size[1])
+        body += '</div><!--id="page" -->\n\n<hr> '
         body += '<span> random pics: </span>\n'
         body += '<div style="overflow:hidden; max-height: 200px">'
         for image in randoms:
             body += '<A href="%s.html"><img src="thumbs/%s-thumb.jpg"></A>\n'%(image.base, image.base)
-        body += '</div>'
+        body += '</div>\n'
         s = """<HTML>
         <HEAD>
            <TITLE>%s</TITLE>
@@ -265,11 +269,11 @@ class Album(object):
             s__photos = list(self.__photos)
             random.shuffle(s__photos)
             for itr in s__photos:
-                if itr == self[i_prev] or itr== self[i_next] or itr == self[i]:
+                if itr == self[i_prev] or itr == self[i_next] or itr == self[i]:
                     continue
                 random_images.append(itr)
                 count = count + 1
-                if count == 9:
+                if count == 11:
                     break
             P.html(self, dir, self[i_prev], self[i_next], random_images)
 
@@ -435,6 +439,67 @@ div.links{
 
 div.links > a{
       color: blue;
+}
+div.previous,
+div.picture,
+div.next{
+    display: inline;
+    position: relative;
+}
+
+div.arrow{
+    position:absolute; 
+    display:inline;
+    bottom:-90px; 
+    font-size:100px
+}
+
+div.arrow1{
+    left:0px;
+}
+
+div.arrow2{
+    right:0px;
+}
+
+div:not(.picture) > a img:hover{
+    position: relative;
+    top: -5px;
+    right: -2px;
+}
+
+@keyframes lefttoleft{
+  from {
+    left: 0px;
+  }
+
+  to {
+    left: -10px;
+  }
+}
+div.arrow1:hover,
+div.previous:hover div.arrow1{
+    animation-duration: 0.5s;
+    animation-name: lefttoleft;
+    animation-iteration-count: infinite;
+    animation-direction: alternate;
+}
+
+@keyframes righttoright{
+  from {
+    right: 0px;
+  }
+
+  to {
+    right: -10px;
+  }
+}
+div.arrow2:hover,
+div.next:hover div.arrow2{
+    animation-duration: 0.5s;
+    animation-name: righttoright;
+    animation-iteration-count: infinite;
+    animation-direction: alternate;
 }
 """
 
