@@ -121,11 +121,11 @@ class Photo(object):
         body += '<H1><A href="../index.html">%s</A></H1> \n\n'%album.title
         body += '<div class="previous"> \n'
         body += '<A href="%s.html" title="Previous"><img src="thumbs/%s-thumb.jpg">'%(prev.base, prev.base)
-        body += '<div class="arrow arrow1">⇦</div></A>\n</div> \n\n<div class="picture"> \n'
+        body += '<div class="arrow arrow1">&#8678;</div></A>\n</div> \n\n<div class="picture"> \n'
         body += '<A href="../%s/%s"><IMG src="../%s/%s" width="%i"></A> \n'%(album.rel_dir, self.name, album.rel_dir, self.caption, self.size[0] )
         body += '</div> \n\n<div class="next"> \n'
         body += '<A href="%s.html" title="Next"><img src="thumbs/%s-thumb.jpg">'%(next.base, next.base)
-        body += '<div class="arrow arrow2">⇨</div></A>\n</div> \n\n'
+        body += '<div class="arrow arrow2">&#8680;</div></A>\n</div> \n\n'
         body += '<br>\n<a href="../%s/%s">%s</A>'%(album.rel_dir, self.name, self.name)
         body += ' <a href="../%s/%s" download title="Download">&#8659;</a></li>'%(album.rel_dir, self.name)
         body += '(%ix%i)\n\n'%(self.size[0], self.size[1])
@@ -560,7 +560,6 @@ if __name__ ==  '__main__':
         if len(argv) > i:
             if argv[i] == "--no-output":
                 no_output = True
-                #print("no output setted")
                 continue
 
             if (argv[i] == "--with-links"):
